@@ -76,7 +76,7 @@ These are the exact band boundaries in PDF points.
 
 **4. Map bands to problems from the page image**, never from marker coordinates.
 
-**5a. Mode A — crop and merge.** Job table `(page, strip_x0, strip_x1, y0, y1, section, label)`
+**5a. Mode A — crop and merge.** Job table `(page, x0, y0, x1, y1, section, label)`
 with `y0`/`y1` inside real GAP bands; then `out.new_page()` +
 `cur.show_pdf_page(target, src, pno, clip=rect)`. Helpers in `scripts/extract.py`.
 

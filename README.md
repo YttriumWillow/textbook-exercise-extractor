@@ -4,7 +4,7 @@
 由 *Thomas' Calculus, 14th ed. in SI Units* 的 MAT1001 Homework 1 任务沉淀而来。
 
 An Agent Skill that turns an assignment list (`section + problem numbers`) plus a textbook
-PDF into one clean document of exactly those problems.
+PDF into one clean document of exactly those problems, re-typeset with LaTeX.
 
 ## 目录结构 / Layout
 
@@ -14,7 +14,6 @@ textbook-exercise-extractor/
 ├── SKILL.zh-CN.md                       # 中文版（同一 skill 的中文镜像）
 ├── README.md                            # 本文件
 ├── scripts/
-│   ├── extract.py                       # 模式 A：裁剪合并 + 墨迹剖面 + 校样图
 │   ├── figure_box.py                    # 图形裁剪框自动 fit（四边无墨迹）
 │   └── tex2md.py                        # LaTeX → Markdown（保留公式与 a./b./c. 小问）
 ├── references/
@@ -34,18 +33,18 @@ textbook-exercise-extractor/
 
 Copy the whole folder into `~/.workbuddy/skills/` or `<workspace>/.workbuddy/skills/`.
 
-## 两种模式 / Two modes
+## 做法 / How it works
 
-- **模式 B（默认）LaTeX 重排** —— 题干与公式是真文本、矢量排版，可选中可搜索；
-  图形从原书 400 dpi 提取。用户要"完整数学式子"或遇到裁剪/预览问题时用这个。
-- **模式 A 裁剪合并** —— 直接裁剪原页面片段拼 PDF，速度快但公式可能被切、文本不可选。
+- 题目按作业清单从教材**逐题转写为 LaTeX**，公式是真文本、矢量排版，可选中可搜索。
+- 图形从原书 400 dpi 提取；自动扩展裁剪框直到四边无墨迹，与正文并排时按 x 区间隔离。
+- 习题组说明段落（如 `Find the limits in Exercises 23–42.`）必须一起写进 `.tex`。
 
 ## 语言支持 / Language support
 
-| 教材语言 | 模式 A | 模式 B |
-|---|---|---|
-| 英文 | 直接可用 | `pdflatex` + `article` |
-| 中文 / 中英混排 | 直接可用 | `xelatex` + `ctexart`（`tlmgr install ctex cjk xecjk zhnumber`）<br>已实测：SimSun/SimHei 渲染正常，中文可被正常复制 |
+| 教材语言 | 做法 |
+|---|---|
+| 英文 | `pdflatex` + `article`（更快，无 fontconfig 依赖） |
+| 中文 / 中英混排 | `xelatex` + `ctexart`（`tlmgr install ctex cjk xecjk zhnumber`）<br>已实测：SimSun/SimHei 渲染正常，中文可被正常复制 |
 
 ## 输出约定 / Output conventions
 
@@ -70,8 +69,8 @@ Copy the whole folder into `~/.workbuddy/skills/` or `<workspace>/.workbuddy/ski
 
 ## 依赖 / Requirements
 
-- Python + `pymupdf`（读取与渲染 PDF）
-- TeX（模式 B）：`pdflatex` 足够处理英文；中文需 `xelatex` + `ctex`
+- Python + `pymupdf`（读取与渲染 PDF；图形提取需要它）
+- TeX：`pdflatex` 足够处理英文；中文需 `xelatex` + `ctex`
   - 默认装到系统软件目录 `C:/Program Files/texlive/<year>`，`scheme-small`
   - 装前检查剩余空间（预留 ≥ 4 GB），不足则**停下来询问用户**
 - pandoc（**仅** DOCX / HTML 输出需要；用户没提就不要装）

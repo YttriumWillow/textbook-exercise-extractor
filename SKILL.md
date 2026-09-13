@@ -1,13 +1,14 @@
 ---
 name: textbook-exercise-extractor
-description: Build a homework/problem-set PDF from a large textbook PDF, given an assignment list of section + problem numbers (e.g. "2.2: #1, 4(a)-(e), 9..."). Default mode re-typesets the problems with LaTeX so formulas become real selectable vector text; a faster crop-and-merge mode is also supported. Always also pull in the exercise-set instruction paragraph each problem depends on. Use when a user hands over a homework list and a textbook PDF, or asks to collect textbook problems into one PDF.
+description: Build a homework/problem-set PDF from a large textbook PDF, given an assignment list of section + problem numbers (e.g. "2.2: #1, 4(a)-(e), 9..."). Re-typesets the problems with LaTeX so formulas become real selectable vector text. Always also pull in the exercise-set instruction paragraph each problem depends on. Use when a user hands over a homework list and a textbook PDF, or asks to collect textbook problems into one PDF.
 agent_created: true
 ---
 
 # Textbook Exercise Extractor
 
 Given an assignment list (`section + problem numbers`) and a textbook PDF, produce one PDF
-containing exactly those problems.
+containing exactly those problems, re-typeset with LaTeX so formulas become real selectable
+vector text.
 
 **Always also include the exercise-set instruction a problem depends on.** Without
 `Limits of quotients — Find the limits in Exercises 23–42.` the reader cannot tell what a
@@ -36,24 +37,16 @@ Same for TeX packages — add them via `tlmgr` when a build fails, not ahead of 
 
 Never write scratch files into the workspace root. Create one scratch dir first
 (`<workspace>/.scratch/` or `<workspace>/<job>_build/`) and put every probe script, log,
-dump, profile, contact sheet and intermediate PDF in it. Only the final deliverable (and an
+dump, profile, and intermediate PDF in it. Only the final deliverable (and an
 optional small source folder such as `hw1_build/`) belongs at the root. Delete the scratch
 dir when done; large downloads go to `$env:TEMP` and are removed after use.
-
-## Choose the mode
-
-| | Mode A — crop & merge | Mode B — re-typeset with LaTeX |
-|---|---|---|
-| Output | clipped page fragments | freshly typeset text + formulas |
-| Text | not selectable | real selectable/searchable vector text |
-| Risk | tall stacked fractions clipped by the crop box; heavy embedded-page PDFs stutter in viewers | needs transcription |
-| Use when | quick verbatim copy, or figures dominate | **default** — user wants real formulas, selectable text, or hit clipping/preview problems |
 
 ## Core principle: do not trust the PDF text layer for positions
 
 In many typeset books (LaTeX / InDesign exports) span and line bounding boxes are shifted by
 20–40 pt for some paragraphs, so locating a problem by its `"23."` marker silently selects the
-wrong problem. For anything positional use **200 dpi grayscale ink profiles as ground truth**.
+wrong problem. For anything positional use **200 dpi grayscale ink profiles as ground truth**
+when locating figures.
 
 The text layer *is* reliable for:
 - **Characters and superscripts** — a superscript is a `size≈6.1` span next to a `size≈9.0`
@@ -66,43 +59,33 @@ The text layer *is* reliable for:
 with the printed folio; build `section -> page range`. Note the offset (printed page + k = PDF page).
 
 **2. Look at the pages.** Render each exercise page at ~130 dpi and view it. Record the number
-of columns, which problems sit in which sub-column, where the figures are, and which
-instruction banners exist.
+of columns, where the figures are, and which instruction banners exist. This tells you what
+to transcribe and what figures to extract.
 
-**3. Compute ink profiles.** For a column strip `(x0, x1)`:
-`page.get_pixmap(dpi=200, colorspace=csGRAY, clip=Rect(x0,0,x1,H))`, count dark pixels
-(`<205`) per row, and print maximal runs of `GAP` (`rows <= max(2, 0.012*width)`) and `ink`.
-These are the exact band boundaries in PDF points.
+**3. Transcribe each problem to LaTeX.** Cross-check exponents against the span dump and
+radicals/fractions against a high-dpi render of that region. Mistakes on exponents and
+fraction bars are the dominant source of silent errors.
 
-**4. Map bands to problems from the page image**, never from marker coordinates.
+**4. Extract figures as 400 dpi PNG.** Grow the crop box until no ink touches any border
+(`scripts/figure_box.py`). Figures are often **side by side with body text** — isolate
+them by x-range or you will drag text into the image.
 
-**5a. Mode A — crop and merge.** Job table `(page, x0, y0, x1, y1, section, label)`
-with `y0`/`y1` inside real GAP bands; then `out.new_page()` +
-`cur.show_pdf_page(target, src, pno, clip=rect)`. Helpers in `scripts/extract.py`.
+**5. Write the `.tex`** with explicit instruction paragraphs (template:
+`assets/hw-template.tex`) and compile twice.
 
-**5b. Mode B — re-typeset (preferred).**
-1. Transcribe each problem to LaTeX; cross-check exponents against the span dump and
-   radicals/fractions against a high-dpi render of that region.
-2. Extract figures as 400 dpi PNG. Grow the crop box until no ink touches any border
-   (`scripts/figure_box.py`). Figures are often **side by side with body text** — isolate
-   them by x-range or you will drag text into the image.
-3. Write the `.tex` with explicit instruction paragraphs (template: `assets/hw-template.tex`)
-   and compile twice.
-4. Verify by rendering the output pages and reading them: every problem present, formulas
-   render, no `??`, no heading stranded at a page bottom.
+**6. Verify** by rendering the output pages and reading them: every problem present,
+formulas render, no `??`, no heading stranded at a page bottom.
 
-**6. Present the result** and state which mode was used.
+**7. Present the result.**
 
 ## Language support (CJK textbooks)
 
-- **Mode A works with any language** — cropping is language agnostic.
-- **Mode B needs an engine switch**: use `xelatex` + `ctexart` instead of `pdflatex` +
-  `article`, and install `tlmgr install ctex cjk xecjk zhnumber`. `ctex` picks the
-  Windows system CJK fonts (SimSun / SimHei) automatically — verified working.
-  Template: `assets/hw-template-zh.tex`.
+- English: `pdflatex` + `article` (fast, no fontconfig dependency).
+- Chinese / mixed CJK: switch to `xelatex` + `ctexart`, then
+  `tlmgr install ctex cjk xecjk zhnumber`. `ctex` picks the Windows system CJK fonts
+  (SimSun / SimHei) automatically — verified working. Template: `assets/hw-template-zh.tex`.
 - Mixed CJK + maths renders correctly: CJK body text in SimSun, maths in Computer Modern,
   and the PDF text layer still extracts the Chinese as real text.
-- Keep using `pdflatex` for English-only documents (faster, no fontconfig dependency).
 
 ## Output formats
 
@@ -148,8 +131,7 @@ Full steps and post-install fixes: `references/installing-tex-windows.md`.
 
 - Installing TeX on Windows (no admin): `references/installing-tex-windows.md`
 - Column layout traps, verification recipes: `references/layout-pitfalls.md`
-- Scripts: `scripts/extract.py` (Mode A), `scripts/figure_box.py` (figure crops),
-  `scripts/tex2md.py` (LaTeX → Markdown)
+- Scripts: `scripts/figure_box.py` (figure crops), `scripts/tex2md.py` (LaTeX → Markdown)
 
 ## Environment notes (Windows)
 

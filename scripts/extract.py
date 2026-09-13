@@ -47,21 +47,28 @@ def profile(doc, page_index, sx0, sx1, y0, y1):
     _, w, h, _, counts = _strip(doc, page_index, sx0, sx1)
     th = max(2, int(GAP_FRAC * w))
     rows, cur = [], None
-    for i in range(max(0, int(y0 * S)), min(h, int(y1 * S))):
+    r0, r1 = max(0, int(y0 * S)), min(h, int(y1 * S))
+    for i in range(r0, r1):
         lab = "GAP" if counts[i] <= th else "ink"
-        if cur is None or cur[0] != lab:
-            if cur:
-                rows.append(tuple(cur))
-            cur = [lab, i, counts[i]]
-        cur[2] = max(cur[2], counts[i])
+        if cur is None:
+            cur = [lab, i, i, counts[i]]
+        elif cur[0] != lab:
+            cur[2] = i                      # run ends at the previous row
+            rows.append(tuple(cur))
+            cur = [lab, i, i, counts[i]]
+        cur[3] = max(cur[3], counts[i])
     if cur:
+        cur[2] = r1
         rows.append(tuple(cur))
     return [(k, a / S, b / S, m) for k, a, b, m in rows]
 
 
-def crop_rect(doc, page_index, sx0, sx1, y0, y1, pad=4.0):
-    """Tight x extent of the ink inside the band, clipped to the strip."""
-    buf, w, h, st, _ = _strip(doc, page_index, sx0, sx1)
+def crop_rect(doc, page_index, x0, y0, x1, y1, pad=4.0):
+    """Tight x extent of the ink inside the band, clipped to the strip.
+
+    Box order is (x0, y0, x1, y1) -- the same as a PyMuPDF Rect.
+    """
+    buf, w, h, st, _ = _strip(doc, page_index, x0, x1)
     xs0 = xs1 = None
     for r in range(max(0, int(y0 * S)), min(h, int(y1 * S))):
         row = buf[r * st:r * st + w]
@@ -77,8 +84,8 @@ def crop_rect(doc, page_index, sx0, sx1, y0, y1, pad=4.0):
                 break
     if xs0 is None:
         xs0, xs1 = 0, w - 1
-    r = pymupdf.Rect(sx0 + xs0 / S - pad, y0, sx0 + xs1 / S + pad, y1)
-    return r & pymupdf.Rect(sx0, 0, sx1, doc[page_index].rect.height)
+    r = pymupdf.Rect(x0 + xs0 / S - pad, y0, x0 + xs1 / S + pad, y1)
+    return r & pymupdf.Rect(x0, 0, x1, doc[page_index].rect.height)
 
 
 def merge_crops(doc, jobs, out_path, title="Textbook Problems"):
@@ -97,7 +104,7 @@ def merge_crops(doc, jobs, out_path, title="Textbook Problems"):
 
     newpage()
     for pi, x0, y0, x1, y1, sec, label in jobs:
-        rect = crop_rect(doc, pi, x0, x1, y0, y1)
+        rect = crop_rect(doc, pi, x0, y0, x1, y1)
         cur, y = st["cur"], st["y"]
         avail = PH - M - BOTTOM - (y + CAPH)
         if avail < 90:
@@ -127,7 +134,7 @@ def contact_sheet(doc, jobs, jpg_path, cols=3, colw=300, dpi=72):
         h = 40
         for c in range(cols):
             i = r * cols + c
-            if i < len(rects):
+            if i < len(rects) and rects[i].width > 0:
                 h = max(h, int(rects[i].height * min(colw / rects[i].width, 2.0)))
         heights.append(h)
     W = cols * (colw + 8) + 8
@@ -142,8 +149,10 @@ def contact_sheet(doc, jobs, jpg_path, cols=3, colw=300, dpi=72):
                 continue
             pi, x0, y0, x1, y1, sec, label = jobs[i]
             rect = rects[i]
+            if rect.width <= 0:
+                continue
             sc = min(colw / rect.width, 2.0)
-            pix = doc[pi].get_pixmap(dpi=int(dpi * sc), clip=rect)
+            pix = doc[pi].get_pixmap(dpi=max(1, int(dpi * sc)), clip=rect)
             x = 8 + c * (colw + 8)
             pg.insert_text((x, y + 13), f"{sec} {label}", fontname="hebo", fontsize=12)
             pg.insert_image(pymupdf.Rect(x, y + 18, x + pix.width, y + 18 + pix.height),

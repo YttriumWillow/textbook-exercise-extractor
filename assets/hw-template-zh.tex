@@ -1,0 +1,79 @@
+% 中文教材题目模板 —— 用 xelatex 编译（ctex 提供中文支持）
+%   xelatex -interaction=nonstopmode hw-zh.tex      （编译两次）
+% 依赖：tlmgr install ctex cjk xecjk zhnumber
+% ctex 会自动选用 Windows 的 SimSun / SimHei，一般无需手动指定字体。
+% 如需指定：\setCJKmainfont{SimSun}  \setCJKsansfont{SimHei}
+%
+\documentclass[11pt,a4paper]{ctexart}
+\usepackage[margin=2.05cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{parskip}
+\usepackage{needspace}
+\usepackage[hidelinks]{hyperref}
+
+\definecolor{sect}{RGB}{21,88,180}
+\definecolor{notec}{RGB}{105,105,105}
+\definecolor{numb}{RGB}{20,20,20}
+
+\titleformat{\section}{\normalfont\large\bfseries\color{sect}}{}{0pt}{}
+\titleformat{\subsection}{\normalfont\normalsize\bfseries\color{sect}}{}{0pt}{}
+\titlespacing*{\section}{0pt}{16pt}{5pt}
+\titlespacing*{\subsection}{0pt}{11pt}{3pt}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\footnotesize 课程名 · 第 N 次作业 · 教材习题}
+\rhead{\footnotesize 教材名（版本）}
+\cfoot{\footnotesize\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% 题号。\needspace 防止题号落在页底
+\newcommand{\prob}[1]{\par\needspace{4\baselineskip}\medskip\noindent
+  \hangindent=1.75em\hangafter=1\textbf{\color{numb}#1}\hspace{0.45em}\ignorespaces}
+
+% 习题组说明段落 —— 一定要写，否则读者看不出题目要求
+\newcommand{\instr}[1]{\par\needspace{3\baselineskip}\smallskip\noindent
+  {\small\itshape\color{notec}#1}\par\smallskip}
+
+\newcommand{\fig}[2][0.40]{\begin{center}\includegraphics[width=#1\linewidth]{fig/#2}\end{center}}
+
+\setlist[enumerate,1]{label=\alph*.,leftmargin=2.0em,labelsep=0.45em,
+  itemsep=1pt,topsep=2pt,parsep=0pt,partopsep=0pt}
+
+\widowpenalty=10000
+\clubpenalty=10000
+
+\begin{document}
+
+\begin{center}
+{\LARGE\bfseries\color{sect} 课程名 —— 第 N 次作业}\\[3pt]
+{\small 教材名 · 作者}\\[1pt]
+{\small 下列章节的题目，含其所依赖的习题组说明}
+\end{center}
+\hrule
+\vspace{6pt}
+
+%##################################################################
+\section*{第 2.2 节\quad 函数的极限与极限运算法则}
+
+\subsection*{由图像求极限}
+
+\prob{1.} 对下图给出的函数 $g(x)$，求下列极限，或说明其不存在。
+\begin{enumerate}
+  \item \dots
+\end{enumerate}
+\fig[0.38]{FIGNAME}
+
+% 依赖说明的一组题 —— 说明必须紧跟在题目前面
+\needspace{12\baselineskip}
+\subsection*{商的极限}
+\instr{求第 23--42 题中的极限。}
+
+\prob{23.} $\displaystyle\lim_{x\to5}\frac{x-5}{x^{2}-25}$
+
+\end{document}

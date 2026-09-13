@@ -1,0 +1,94 @@
+% Template: homework / problem-set PDF typeset from a textbook.
+% Compile with pdflatex (English + math) -- no fontconfig needed:
+%     pdflatex -interaction=nonstopmode hw.tex   (run twice)
+% Figures live in ./fig/*.png and are extracted from the source textbook at 400 dpi.
+%
+% Required packages beyond scheme-small:
+%     tlmgr install titlesec parskip hyperref needspace enumitem
+%
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.05cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{parskip}
+\usepackage{needspace}
+\usepackage[hidelinks]{hyperref}
+
+\definecolor{sect}{RGB}{21,88,180}
+\definecolor{notec}{RGB}{105,105,105}
+\definecolor{numb}{RGB}{20,20,20}
+
+\titleformat{\section}{\normalfont\large\bfseries\color{sect}}{}{0pt}{}
+\titleformat{\subsection}{\normalfont\normalsize\bfseries\color{sect}}{}{0pt}{}
+\titlespacing*{\section}{0pt}{16pt}{5pt}
+\titlespacing*{\subsection}{0pt}{11pt}{3pt}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\footnotesize COURSE \textperiodcentered\ Homework N \textperiodcentered\ Textbook Problems}
+\rhead{\footnotesize BOOK TITLE (edition)}
+\cfoot{\footnotesize\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% A numbered problem. \needspace keeps the label off a page bottom.
+\newcommand{\prob}[1]{\par\needspace{4\baselineskip}\medskip\noindent
+  \hangindent=1.75em\hangafter=1\textbf{\color{numb}#1}\hspace{0.45em}\ignorespaces}
+
+% The exercise-set instruction paragraph a group of problems depends on.
+% ALWAYS include it -- without it the reader cannot tell what is being asked.
+\newcommand{\instr}[1]{\par\needspace{3\baselineskip}\smallskip\noindent
+  {\small\itshape\color{notec}#1}\par\smallskip}
+
+\newcommand{\fig}[2][0.40]{\begin{center}\includegraphics[width=#1\linewidth]{fig/#2}\end{center}}
+
+\setlist[enumerate,1]{label=\alph*.,leftmargin=2.0em,labelsep=0.45em,
+  itemsep=1pt,topsep=2pt,parsep=0pt,partopsep=0pt}
+\setlist[enumerate,2]{label=\arabic*.,leftmargin=1.7em,labelsep=0.4em,
+  itemsep=1pt,topsep=1pt,parsep=0pt,partopsep=0pt}
+
+\widowpenalty=10000
+\clubpenalty=10000
+
+\begin{document}
+
+\begin{center}
+{\LARGE\bfseries\color{sect} COURSE --- Homework N}\\[3pt]
+{\small BOOK TITLE \textperiodcentered\ authors}\\[1pt]
+{\small Sections listed below --- problem statements, with the exercise-set instructions they depend on}
+\end{center}
+\hrule
+\vspace{6pt}
+
+%##################################################################
+\section*{Section 2.2\quad Limit of a Function and Limit Laws}
+
+\subsection*{Limits from Graphs}
+
+\prob{1.} For the function $g(x)$ graphed here, find the following limits or explain why
+they do not exist.
+\begin{enumerate}
+  \item \dots
+\end{enumerate}
+\fig[0.38]{FIGNAME}
+
+% A group whose instruction matters -- keep it right above the problems.
+\needspace{12\baselineskip}
+\subsection*{Limits of quotients}
+\instr{Find the limits in Exercises 23--42.}
+
+\prob{23.} $\displaystyle\lim_{x\to5}\frac{x-5}{x^{2}-25}$
+
+% A block you want kept on one page (two display formulas + text):
+\needspace{26\baselineskip}
+\prob{65.} \textbf{(part (a))}\par\smallskip
+\noindent a.\quad It can be shown that the inequalities
+\[
+1-\frac{x^{2}}{6}\;<\;\frac{x\sin x}{2-2\cos x}\;<\;1
+\]
+hold for all values of $x$ close to zero. \dots
+
+\end{document}

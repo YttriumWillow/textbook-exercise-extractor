@@ -26,12 +26,40 @@ textbook-exercise-extractor/
 
 ## 安装 / Install
 
-把整个目录复制到技能目录即可：
+把整个目录复制到**宿主 harness 的技能目录**即可。两个 harness 的路径不同，别装错：
 
-- 用户级：`~/.workbuddy/skills/`
-- 项目级：`<workspace>/.workbuddy/skills/`
+| Harness | 用户级（所有工作区） | 项目级（仅该项目） |
+|---|---|---|
+| **dsh** | `~/.dsh/skills/` | `<项目根>/.dsh/skills/` |
+| workbuddy | `~/.workbuddy/skills/` | `<workspace>/.workbuddy/skills/` |
 
-Copy the whole folder into `~/.workbuddy/skills/` or `<workspace>/.workbuddy/skills/`.
+Copy the whole folder into `~/.dsh/skills/` or `<project>/.dsh/skills/` (dsh), or
+`~/.workbuddy/skills/` / `<workspace>/.workbuddy/skills/` (workbuddy).
+
+dsh 侧补充：
+
+- dsh 只扫描这些根目录的**顶层**——目录包 `<name>/SKILL.md` 或平铺 `<name>.md`；
+  刻意为不递归查找嵌套的 `SKILL.md`，所以别把 skill 再套一层子目录。
+- `<项目根>` 指最近的含 `.git` 的祖先目录；找不到就用当前工作目录。
+- 装好后可用 `skill_search` 确认能被发现，再用 `skill_load` 加载正文。
+- dsh 还支持 `.agents/skills/`（项目级与用户级），优先级低于上面的 `.dsh/skills/`。
+
+### frontmatter 约定 / Frontmatter rules
+
+| 键 | 说明 |
+|---|---|
+| `name` | 必填，小写字母/数字/连字符 |
+| `description` | 必填，模型据此判断何时加载该 skill |
+| `whenToUse` / `metadata` | 可选 |
+| `disable-model-invocation` / `user-invocable` | 可选，YAML 布尔值 |
+
+⚠️ **dsh 用严格 YAML 解析 frontmatter，解析失败会把整个 skill 静默丢弃**（只在日志里
+warn 一行）。常见坑：`description` 里出现 `": "` 或 `" #"`（例如 `如 "2.2: #1"`），
+未加引号的 plain scalar 会解析失败 —— 必须写成双引号标量，内部引号转义为 `\"`：
+
+```yaml
+description: "…（如 \"2.2: #1, 4(a)-(e), 9...\"）…"
+```
 
 ## 做法 / How it works
 
@@ -69,9 +97,12 @@ Copy the whole folder into `~/.workbuddy/skills/` or `<workspace>/.workbuddy/ski
 
 ## 依赖 / Requirements
 
-- Python + `pymupdf`（读取与渲染 PDF；图形提取需要它）
+- Python + PyMuPDF：`pip install pymupdf`（读取与渲染 PDF、图形提取都需要它）
 - TeX：`pdflatex` 足够处理英文；中文需 `xelatex` + `ctex`
-  - 默认装到系统软件目录 `C:/Program Files/texlive/<year>`，`scheme-small`
+  - **装前先确认本机是否已有 TeX Live** —— 已装但没进 `PATH` 的情况很常见，那也算已装：
+    `where.exe pdflatex`，再查 `C:\Program Files\texlive`、`D:\Program Files\texlive`
+  - 已有就把它的 `bin\windows` 加进用户 `PATH` 即可，**不要重复安装**（脚本见 SKILL.md）
+  - 确需安装时装到系统软件目录 `C:/Program Files/texlive/<year>`，`scheme-small`
   - 装前检查剩余空间（预留 ≥ 4 GB），不足则**停下来询问用户**
 - pandoc（**仅** DOCX / HTML 输出需要；用户没提就不要装）
 

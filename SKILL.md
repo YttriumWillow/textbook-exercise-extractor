@@ -113,8 +113,34 @@ pandoc hw1.md -f markdown -t html5 -s --mathjax -o hw1.html
 
 ## Installing TeX (user rule)
 
-**Default target is the OS standard location** — `C:/Program Files/texlive/<year>` on
-Windows — and keep it small:
+**Look for an existing TeX Live FIRST — never install a second one.** A TeX Live that is
+installed but missing from `PATH` still looks "not installed" to `pdflatex`, so search the
+disk before concluding anything:
+
+```powershell
+where.exe pdflatex
+Get-ChildItem 'C:\Program Files\texlive','D:\Program Files\texlive' -ErrorAction SilentlyContinue
+```
+
+If one exists on any drive / any year, **do not install another.** Add its `bin\windows`
+to the user `PATH` instead, and tell the user to open a **new** terminal (an already-running
+shell keeps the old `PATH`):
+
+```powershell
+$texBin = 'D:\Program Files\texlive\<year>\bin\windows'   # ← the one you found
+$k   = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Environment', $true)
+$cur = [string]$k.GetValue('Path', '', [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
+if (($cur -split ';') -notcontains $texBin) {
+  # keep ExpandString — a plain [Environment]::SetEnvironmentVariable call can
+  # downgrade the value to REG_SZ and break any %VAR% inside PATH.
+  $k.SetValue('Path', $cur.TrimEnd(';') + ';' + $texBin,
+              [Microsoft.Win32.RegistryValueKind]::ExpandString)
+}
+$k.Close()
+```
+
+Only if nothing is found, install — **default target is the OS standard location**
+(`C:/Program Files/texlive/<year>` on Windows) — and keep it small:
 
 - `selected_scheme scheme-small` (or `scheme-basic` + a few explicit packages).
 - `tlpdbopt_install_docfiles 0` / `tlpdbopt_install_srcfiles 0` in the profile.
@@ -136,5 +162,7 @@ Full steps and post-install fixes: `references/installing-tex-windows.md`.
 ## Environment notes (Windows)
 
 - Bash may be broken — use the PowerShell tool and redirect stdout to a file when it returns nothing.
-- Use the managed Python venv and `pip install pymupdf` there.
+- Figure extraction needs PyMuPDF: `pip install pymupdf`. Use the harness's managed venv if
+  it provides one, otherwise the plain interpreter works fine (verified on Python 3.12 +
+  pymupdf 1.28.2).
 - `page.get_pixmap(dpi=...)` requires an **int**, not a float.

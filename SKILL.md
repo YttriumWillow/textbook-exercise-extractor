@@ -1,6 +1,6 @@
 ---
 name: textbook-exercise-extractor
-description: Build a homework/problem-set PDF from a large textbook PDF, given an assignment list of section + problem numbers (e.g. "2.2: #1, 4(a)-(e), 9..."). Re-typesets the problems with LaTeX so formulas become real selectable vector text. Always also pull in the exercise-set instruction paragraph each problem depends on. Use when a user hands over a homework list and a textbook PDF, or asks to collect textbook problems into one PDF.
+description: "Build a homework/problem-set PDF from a large textbook PDF, given an assignment list of section + problem numbers (e.g. \"2.2: #1, 4(a)-(e), 9...\"). Re-typesets the problems with LaTeX so formulas become real selectable vector text. Always also pull in the exercise-set instruction paragraph each problem depends on. Use when a user hands over a homework list and a textbook PDF, or asks to collect textbook problems into one PDF."
 agent_created: true
 ---
 

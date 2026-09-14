@@ -15,6 +15,7 @@ textbook-exercise-extractor/
 ├── README.md                            # 本文件
 ├── scripts/
 │   ├── figure_box.py                    # 图形裁剪框自动 fit（四边无墨迹）
+│   ├── glyphcheck.py                    # 文本层说谎时判定字形真身（降部检验 / 字形比对）
 │   └── tex2md.py                        # LaTeX → Markdown（保留公式与 a./b./c. 小问）
 ├── references/
 │   ├── installing-tex-windows.md        # Windows 免管理员安装 TeX Live（清华镜像）
@@ -66,6 +67,10 @@ description: "…（如 \"2.2: #1, 4(a)-(e), 9...\"）…"
 - 题目按作业清单从教材**逐题转写为 LaTeX**，公式是真文本、矢量排版，可选中可搜索。
 - 图形从原书 400 dpi 提取；自动扩展裁剪框直到四边无墨迹，与正文并排时按 x 区间隔离。
 - 习题组说明段落（如 `Find the limits in Exercises 23–42.`）必须一起写进 `.tex`。
+- ⚠️ **文本层不可信，连字符都不可信**：这类 PDF 的子集字体常被重编码，`get_text()` 会把
+  画出来的 `v` 报成 `y`、`θ` 报成 `u`、`√` 报成 `2`（详见 `references/layout-pitfalls.md`）。
+  所以「拿转写结果和文本层对一遍」等于拿错的去验错的；方程里的**单个字母**必须看字形或做
+  字形比对，工具：`scripts/glyphcheck.py`（降部检验 + 基线归一化的形状匹配）。
 
 ## 语言支持 / Language support
 

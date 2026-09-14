@@ -48,10 +48,25 @@ In many typeset books (LaTeX / InDesign exports) span and line bounding boxes ar
 wrong problem. For anything positional use **200 dpi grayscale ink profiles as ground truth**
 when locating figures.
 
+**The text layer also lies about *which character* a glyph is.** Subset fonts are often
+re-encoded, so `get_text()` reports a different symbol than the one drawn. On *Thomas' Calculus
+14e SI* the maths font maps a drawn italic `v` to the codepoint `y` and a drawn `\theta` to `u`,
+which silently turns "Suppose u and v are functions" into "u and y" and `d/dx(uv)` into
+`d/dx(uy)`. Checking a transcription against the text layer is therefore circular, and anything
+built only on the text layer — an LLM reading a transcript, an ASCII-art renderer — inherits
+every one of those errors.
+
 The text layer *is* reliable for:
-- **Characters and superscripts** — a superscript is a `size≈6.1` span next to a `size≈9.0`
-  base span (`x^2` vs `x^3`, `7^-` vs `7^+`). Use it to settle ambiguous exponents.
-- Finding the exercise-set headings (`EXERCISES n.m`).
+- **Span sizes** — a superscript is a `size≈6.1` span next to a `size≈9.0` base span
+  (`x^2` vs `x^3`, `7^-` vs `7^+`). Use it to settle ambiguous exponents.
+- **Structure** — problem numbering, page mapping, and locating `EXERCISES n.m`.
+- **Font names** — often the tell. A plain Latin letter drawn from a maths subset font
+  (`PearsonMATHPRO01`) while the same letter elsewhere comes from the text font
+  (`TimesLTPro-Italic`) means the codepoint is a re-encoding.
+
+For character identity, look at the glyph or compare its shape against a specimen you already
+trust: `scripts/glyphcheck.py`. Observed mappings, both automated tests and worked examples are
+in `references/layout-pitfalls.md`.
 
 ## Workflow
 
@@ -62,9 +77,11 @@ with the printed folio; build `section -> page range`. Note the offset (printed 
 of columns, where the figures are, and which instruction banners exist. This tells you what
 to transcribe and what figures to extract.
 
-**3. Transcribe each problem to LaTeX.** Cross-check exponents against the span dump and
-radicals/fractions against a high-dpi render of that region. Mistakes on exponents and
-fraction bars are the dominant source of silent errors.
+**3. Transcribe each problem to LaTeX.** Cross-check exponents against the span dump,
+radicals/fractions against a high-dpi render of that region, and **every single letter against
+the glyph itself** (`scripts/glyphcheck.py`) — a re-encoded font makes a drawn `v` read as `y`.
+Mistakes on exponents, fraction bars and re-encoded letters are the dominant source of silent
+errors.
 
 **4. Extract figures as 400 dpi PNG.** Grow the crop box until no ink touches any border
 (`scripts/figure_box.py`). Figures are often **side by side with body text** — isolate
@@ -157,7 +174,8 @@ Full steps and post-install fixes: `references/installing-tex-windows.md`.
 
 - Installing TeX on Windows (no admin): `references/installing-tex-windows.md`
 - Column layout traps, verification recipes: `references/layout-pitfalls.md`
-- Scripts: `scripts/figure_box.py` (figure crops), `scripts/tex2md.py` (LaTeX → Markdown)
+- Scripts: `scripts/figure_box.py` (figure crops), `scripts/tex2md.py` (LaTeX → Markdown),
+  `scripts/glyphcheck.py` (settle what a glyph really is when the text layer lies)
 
 ## Environment notes (Windows)
 

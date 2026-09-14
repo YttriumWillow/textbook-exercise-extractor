@@ -52,6 +52,67 @@ Real examples that were mis-read at low resolution:
 - 2.6 #43 is `lim_{x→7} 4/(x−7)²` — a **two-sided** limit, no `+`/`−` superscript.
   2.6 #39 is the one-sided `lim_{x→2⁻} 3/(x−2)`.
 
+## The text layer lies about characters too (re-encoded subset fonts)
+
+Span *sizes* are trustworthy; the *character* attached to a glyph is not. Subset fonts ship with
+their own cmap, and on *Thomas' Calculus 14e SI* the maths subset (`PearsonMATHPRO01`) is
+re-encoded, so `get_text()` confidently reports the wrong symbol:
+
+| drawn glyph | `get_text()` says | what it silently corrupts |
+|---|---|---|
+| italic `v` | `y` | "Suppose u and **v** are functions" → "u and y"; `d/dx(uv)` → `d/dx(uy)`; `v(0) = -1` → `y(0) = -1` |
+| `θ` | `u` | `r = ((θ−1)(θ²+θ+1))/θ³` → `r = ((u−1)(u²+u+1))/u³` |
+| `π` | `p` | `x₀ = π/2` → `x0 = p>2` |
+| `√` | `2` (size ≈8.1) | `y = √(3x−1)` → `y = 2x − 1` |
+| fraction slash `/` | `>` | `x^{1/5}` → `x1>5` |
+| `(`, `)` | `a`, `b` | `w = ((1+3z)/3z)(3−z)` → `w = a1 + 3z ... b(3 - z)` |
+| `∛` | `A` | `∛(...)` → `A(...)` |
+
+This is worse than the positional shift, because it fails *silently* and it fails for every
+consumer of the text: an LLM given a text dump, a diff against the extracted text, an ASCII-art
+renderer. **Verifying a transcription against the text layer is circular** — the text layer is
+what is wrong.
+
+### How to settle a letter
+
+The trap is systematic per font, so the fix is mechanical. Two tests decide almost every case,
+and `scripts/glyphcheck.py` implements both:
+
+1. **Descender test** (`glyphcheck.py chars`) — a `y` has a descender, a `v` does not. The tool
+   prints, per character, the fraction of ink below the baseline. In the real case:
+   suspect reported `y` → `desc=0.01`, font `PearsonMATHPRO01` → *flagged, no descender*;
+   a genuine `y` (`y = x³ + 7`) → `desc=0.32`, font `TimesLTPro-Italic`.
+   It also flags the inverse (a letter that is not `y g p q j` but *does* have a descender).
+2. **Shape match** (`glyphcheck.py match`) — rasterise the suspect and a specimen of the claimed
+   letter, normalise by font size and anchor both on the baseline, then take the IoU. Keep the
+   baseline anchor: cropping to the ink and stretching to a square destroys exactly the cue that
+   separates `v` from `y`. Measured on the real case: two genuine italic `y`s → **IoU 1.00**;
+   the suspect (really a `v`) against genuine italic `y`s → **IoU 0.23**.
+
+When no trustworthy specimen exists (the font may map *every* `v` to `y`, so you cannot find a
+reference by searching for `v`), fall back to shape reasoning plus the font name:
+- `v` sits on the baseline, no descender; `θ` has a crossbar; both are "what else could it be"
+  obvious once seen. `glyphcheck.py sheet` renders the suspect next to references for a look.
+- Compare **font names** across the page: in this book a genuine Latin letter in the same context
+  comes from `TimesLTPro-Italic` (155 italic `y` and 32 `u` across the nine exercise pages
+  sampled), while the re-encoded ones come from `PearsonMATHPRO01` on those same pages (28 `y`
+  that are really `v`, 20 `u` that are really `θ`). Operators legitimately use the maths font;
+  a *plain letter* using it is the anomaly.
+
+Sizes and positions stay usable for exponents throughout — it is only identity that is unsafe.
+
+### Real cases from the MAT1001 Homework 2 build
+
+| problem | text layer / first pass produced | actually printed |
+|---|---|---|
+| 3.3 #21 | `y = (1−t)(1+t²)⁻¹` | `v = (1−t)(1+t²)⁻¹` |
+| 3.3 #35 | `r = ((u−1)(u²+u+1))/u³` | `r = ((θ−1)(θ²+θ+1))/θ³` |
+| 3.3 #39 | "Suppose `u` and `y` are functions", `d/dx(uy)` | "Suppose `u` and `v`", `d/dx(uv)`, `d/dx(u/v)`, `d/dx(v/u)`, `d/dx(7v−2u)` |
+
+Three near-misses that the same pass confirmed as *correct* — do not "fix" these: 3.3 #29 really
+is `x⁴/2 − (3/2)x² − x`; 3.3 #17 really is `(2x+5)/(3x−2)`; 3.1 #23's stem really does read
+"The number after t hours is shown in the accompanying figure."
+
 ## Figure crop box
 
 Start from a candidate box inside the figure, then grow it (1 pt per side per iteration,

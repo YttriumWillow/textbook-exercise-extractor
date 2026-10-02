@@ -48,13 +48,19 @@ In many typeset books (LaTeX / InDesign exports) span and line bounding boxes ar
 wrong problem. For anything positional use **200 dpi grayscale ink profiles as ground truth**
 when locating figures.
 
+Inside a maths formula the boxes are shifted *without* a consistent offset, so an operator's
+reported x/y is meaningless — the `-` and the `t` of one expression have been seen reporting
+identical x. Only plain-text-font glyphs (`TimesLTPro-*` here) have trustworthy positions; read
+the problem-number span's `x` to decide which sub-column a problem is in, never the formula's.
+
 **The text layer also lies about *which character* a glyph is.** Subset fonts are often
 re-encoded, so `get_text()` reports a different symbol than the one drawn. On *Thomas' Calculus
 14e SI* the maths font maps a drawn italic `v` to the codepoint `y` and a drawn `\theta` to `u`,
 which silently turns "Suppose u and v are functions" into "u and y" and `d/dx(uv)` into
-`d/dx(uy)`. Checking a transcription against the text layer is therefore circular, and anything
-built only on the text layer — an LLM reading a transcript, an ASCII-art renderer — inherits
-every one of those errors.
+`d/dx(uy)`. The corruption is not confined to letters — a drawn `\le` comes back as an ellipsis
+and a drawn `\ne` as the digit `3`. Checking a transcription against the text layer is therefore
+circular, and anything built only on the text layer — an LLM reading a transcript, an ASCII-art
+renderer — inherits every one of those errors.
 
 The text layer *is* reliable for:
 - **Span sizes** — a superscript is a `size≈6.1` span next to a `size≈9.0` base span
@@ -70,28 +76,58 @@ in `references/layout-pitfalls.md`.
 
 ## Workflow
 
-**1. Locate the exercise sets.** For every page, log lines matching `EXERCISES\s+\d+\.\d+`
-with the printed folio; build `section -> page range`. Note the offset (printed page + k = PDF page).
+**0. Make sure you can actually see the pages.** Call `read_image` on the PDF's first exercise
+page. If it is refused with `model "<m>" does not declare image input`, the model route is
+missing the `image` modality — fix the config (it takes effect immediately, no restart) rather
+than falling back to ASCII art. Check whether *subagents* have the tool too; they usually do.
+Full recipe, the config line, a provider control-probe, and the tile/crop sizes that keep text
+legible: `references/visual-verification.md`.
 
-**2. Look at the pages.** Render each exercise page at ~130 dpi and view it. Record the number
-of columns, where the figures are, and which instruction banners exist. This tells you what
-to transcribe and what figures to extract.
+Everything below assumes you can look at a rendering. This is not a stylistic preference —
+a build done without it reversed the signs of a polynomial and mis-filed a problem's page, and
+neither error was detectable by cross-checking the text layer, because the text layer was the
+thing that was wrong.
+
+**1. Locate the exercise sets.** For every page, log lines matching `EXERCISES\s+\d+\.\d+`
+with the printed folio; build `section -> page range`. Note the offset (printed page + k = PDF page),
+and **verify** it against a page header rather than assuming 0 — then confirm it on at least two
+pages. When a problem is "not found", sweep the neighbouring pages before reporting it missing;
+one build lost time on a `p171 #43: NOT FOUND` for a problem that was on p170.
+
+**2. Look at the pages.** Render each exercise page at 300 dpi and view it in quadrants
+(a whole-page 300 dpi image gets downsampled). Record the sub-column x positions, where the
+figures are, and which instruction banners exist. Figures can sit in the *opposite* column from
+their problem's stem, and a statement can continue at the top of the other column — so look at
+the whole page, not just the region around the number.
 
 **3. Transcribe each problem to LaTeX.** Cross-check exponents against the span dump,
 radicals/fractions against a high-dpi render of that region, and **every single letter against
-the glyph itself** (`scripts/glyphcheck.py`) — a re-encoded font makes a drawn `v` read as `y`.
-Mistakes on exponents, fraction bars and re-encoded letters are the dominant source of silent
-errors.
+the glyph itself** — a re-encoded font makes a drawn `v` read as `y`. Mistakes on exponents,
+fraction bars and re-encoded letters are the dominant source of silent errors.
+
+**Carry the exercise-set instruction for every problem**, and check coverage explicitly: for
+each instruction line, list the problem range it claims and confirm every assigned problem in
+that range has its instruction present. A missing instruction paragraph is invisible when you
+re-read your own transcript — this is the failure mode an independent reviewer catches.
 
 **4. Extract figures as 400 dpi PNG.** Grow the crop box until no ink touches any border
 (`scripts/figure_box.py`). Figures are often **side by side with body text** — isolate
-them by x-range or you will drag text into the image.
+them by x-range or you will drag text into the image. Then look at each crop: one stray line of
+the neighbouring problem, or a duplicated problem number carried in from the book, is easy to
+ship by accident.
 
 **5. Write the `.tex`** with explicit instruction paragraphs (template:
-`assets/hw-template.tex`) and compile twice.
+`assets/hw-template.tex`) and compile twice. Keep `\needspace` modest (§4–16 lines); values in
+the 20–34 range dump half a page of whitespace and add pages.
 
-**6. Verify** by rendering the output pages and reading them: every problem present,
-formulas render, no `??`, no heading stranded at a page bottom.
+**6. Verify on two levels.**
+  - Render the output pages (200 dpi, top/bottom halves so nothing is downscaled) and read them
+    all: every problem present, formulas render, no `??`, no heading stranded at a page bottom.
+  - Then spawn **one cross-checking subagent per section**, each given the transcript, its page
+    tiles and the glyph-trap table, returning per-problem `✅ / ❌ / ⚠️ cannot determine` verdicts.
+    Recipe: `references/visual-verification.md`. On a 39-problem build this found zero maths
+    errors but two missing structural elements — which is exactly the class of thing the author
+    of a transcript cannot see.
 
 **7. Present the result.**
 
@@ -172,9 +208,11 @@ Full steps and post-install fixes: `references/installing-tex-windows.md`.
 
 ## Details
 
+- **Getting and using a vision tool (read this first)**: `references/visual-verification.md`
 - Installing TeX on Windows (no admin): `references/installing-tex-windows.md`
 - Column layout traps, verification recipes: `references/layout-pitfalls.md`
-- Scripts: `scripts/figure_box.py` (figure crops), `scripts/tex2md.py` (LaTeX → Markdown),
+- Scripts: `scripts/crop_rect.py` (page tiles + point-box crops, for looking at pages),
+  `scripts/figure_box.py` (figure crops), `scripts/tex2md.py` (LaTeX → Markdown),
   `scripts/glyphcheck.py` (settle what a glyph really is when the text layer lies)
 
 ## Environment notes (Windows)

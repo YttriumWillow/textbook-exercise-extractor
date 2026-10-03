@@ -1,49 +1,171 @@
+% =====================================================================================
 % Template: homework / problem-set PDF typeset from a textbook.
-% Compile with pdflatex (English + math) -- no fontconfig needed:
-%     pdflatex -interaction=nonstopmode hw.tex   (run twice)
-% Figures live in ./fig/*.png and are extracted from the source textbook at 400 dpi.
 %
-% Required packages beyond scheme-small:
+% GOAL: the output should look like it was torn out of the source book -- same body
+% serif, same sans-serif accent colour, same section banner, same problem-number face.
+% It is NOT meant to be a generic LaTeX handout.
+%
+% Compile with pdflatex (English + maths), twice:
+%     pdflatex -interaction=nonstopmode hw.tex
+% Figures live in ./fig/*.png, extracted from the source textbook at 400 dpi.
+%
+% Packages beyond scheme-small:
 %     tlmgr install titlesec parskip hyperref needspace enumitem
-%
+% (the fonts below come from psnfss + tex-gyre, which scheme-small already has)
+% =====================================================================================
+
 \documentclass[11pt,a4paper]{article}
+
+\usepackage{xcolor}            % the STYLE BLOCK below needs \definecolor
+
+%#####################################################################################
+%##  STYLE BLOCK -- everything that makes this look like the source book.           ##
+%##                                                                                  ##
+%##  Do not hand-write this from scratch: run                                       ##
+%##      python scripts/style_probe.py -i book.pdf -p <exercise pages> --latex      ##
+%##  and paste its output over this block. The probe prints it ready to paste,      ##
+%##  with every value taken from the book itself.                                   ##
+%##                                                                                  ##
+%##  The values below were MEASURED from Thomas' Calculus 14e SI (Global Edition)   ##
+%##  and are kept as a worked example, not as a universal default. A different book ##
+%##  has a different body face, a different accent colour, and possibly no banner   ##
+%##  and no running-head rule at all. Re-measure; do not assume.                    ##
+%#####################################################################################
+
+% ---- 1. faces -----------------------------------------------------------------------
+%   book: body TimesLTPro-Roman, headings HelveticaNeueLTW1G
+\usepackage{mathptmx}          % Times-like text AND maths  (swap for your book's face)
+\usepackage{tgheros}           % Helvetica-like sans        (headings, banner, folio)
+
+\newcommand{\StyleBodyFont}{\rmfamily}
+\newcommand{\StyleSansFont}{\sffamily}
+
+% ---- 2. palette ---------------------------------------------------------------------
+%   book: measured from the exercise pages
+\definecolor{StyleInk}{HTML}{231F20}        % body text
+\definecolor{StyleAccent}{HTML}{0089CF}     % blue sans group headings ("Economics")
+\definecolor{StyleBanner}{HTML}{00608A}     % filled EXERCISES banner
+\definecolor{StyleBannerText}{HTML}{FFFFFF}
+\definecolor{StyleNumber}{HTML}{790018}     % the section number beside the banner
+\definecolor{StyleBannerRule}{HTML}{939598} % grey hairline the banner hangs from
+\definecolor{StyleHeadText}{HTML}{231F20}   % running-head text
+\definecolor{StyleHeadRule}{HTML}{ED1846}   % running-head hairline (unused when off)
+
+% ---- 3. banner ----------------------------------------------------------------------
+%   In the source this is: a full-width grey hairline, with a filled box carrying white
+%   "EXERCISES" hanging from it, then the section number in dark crimson beside it.
+%   Some books have no banner (this one has: label, box 79x22pt). If yours does not, the
+%   probe proposes \StyleBannerfalse and the section heading degrades to a plain
+%   coloured line with a hairline under it.
+\newif\ifStyleBanner
+\StyleBannertrue
+
+%   Vertical offset from the banner's text baseline up to the hairline. This value is the
+%   template's own box geometry (0.75 x the 14pt label below + 3pt \fboxsep), tuned so the
+%   hairline sits on the box's top edge -- the probe reports the book's own number as a
+%   comment (15.3pt between baseline and rule for this book). Nudge if the rule cuts the box.
+\newcommand{\StyleBannerRaise}{13.5pt}
+
+%   The word printed inside the box. Match the book's own language and case.
+\newcommand{\StyleBannerLabel}{EXERCISES}
+
+% ---- 4. instructions -----------------------------------------------------------------
+%   Measured: this book sets the exercise-set instruction in upright roman, same size as
+%   the body -- the blue group heading above it is what separates it. Set to \relax for
+%   that; set to \itshape if your book italicises instructions.
+\newcommand{\StyleInstrShape}{\relax}
+
+% ---- 5. running head -----------------------------------------------------------------
+%   Measured: this book's running head is sans text in the body ink colour, and there is
+%   NO hairline under it. Enable \StyleHeadRuletrue only if your book rules its head, and
+%   then put the rule's measured colour in StyleHeadRule above.
+\newif\ifStyleHeadRule
+\StyleHeadRulefalse
+
+%#####################################################################################
+%##  END STYLE BLOCK -- below here is machinery, not styling.                       ##
+%#####################################################################################
+
 \usepackage[margin=2.05cm]{geometry}
 \usepackage{amsmath,amssymb}
 \usepackage{graphicx}
 \usepackage{enumitem}
-\usepackage{xcolor}
 \usepackage{fancyhdr}
 \usepackage{titlesec}
 \usepackage{parskip}
 \usepackage{needspace}
+\usepackage{array}
 \usepackage[hidelinks]{hyperref}
 
-\definecolor{sect}{RGB}{21,88,180}
-\definecolor{notec}{RGB}{105,105,105}
-\definecolor{numb}{RGB}{20,20,20}
-
-\titleformat{\section}{\normalfont\large\bfseries\color{sect}}{}{0pt}{}
-\titleformat{\subsection}{\normalfont\normalsize\bfseries\color{sect}}{}{0pt}{}
-\titlespacing*{\section}{0pt}{16pt}{5pt}
-\titlespacing*{\subsection}{0pt}{11pt}{3pt}
+\color{StyleInk}
+\setlength{\parskip}{3pt plus 1pt minus 1pt}
 
 \pagestyle{fancy}
 \fancyhf{}
-\lhead{\footnotesize COURSE \textperiodcentered\ Homework N \textperiodcentered\ Textbook Problems}
-\rhead{\footnotesize BOOK TITLE (edition)}
-\cfoot{\footnotesize\thepage}
-\renewcommand{\headrulewidth}{0.4pt}
+\ifStyleHeadRule
+  \renewcommand{\headrulewidth}{0.4pt}
+  \renewcommand{\headrule}{\hbox to\headwidth{\color{StyleHeadRule}%
+    \leaders\hrule height \headrulewidth\hfill}}
+\else
+  \renewcommand{\headrulewidth}{0pt}   % this book rules nothing under the head
+\fi
+\lhead{\footnotesize\StyleSansFont\color{StyleHeadText} COURSE \textperiodcentered\ Homework N}
+\rhead{\footnotesize\StyleSansFont\color{StyleHeadText} BOOK TITLE (edition)}
+\cfoot{\footnotesize\StyleSansFont\color{StyleInk}\thepage}
 
-% A numbered problem. \needspace keeps the label off a page bottom.
-\newcommand{\prob}[1]{\par\needspace{4\baselineskip}\medskip\noindent
-  \hangindent=1.75em\hangafter=1\textbf{\color{numb}#1}\hspace{0.45em}\ignorespaces}
+% -- section heading. With the banner on this reproduces the book's exercise opener:
+%      ----------------------------  (full-width grey hairline)
+%      [ EXERCISES ]  3.6   The Chain Rule
+%    Give an empty second argument if the book does not print the section title here.
+\newcommand{\exbanner}[2]{%
+  \par\needspace{6\baselineskip}\medskip
+  \noindent
+  \ifStyleBanner
+    % hairline first, so the opaque box painted after it covers the overlap
+    \rlap{\raisebox{\StyleBannerRaise}{\rlap{\color{StyleBannerRule}%
+      \rule{\linewidth}{0.5pt}}}}%
+    \colorbox{StyleBanner}{\textcolor{StyleBannerText}{\StyleSansFont\bfseries
+      \fontsize{14}{16}\selectfont\,\StyleBannerLabel\,}}%
+    \hspace{0.55em}%
+    {\StyleSansFont\bfseries\fontsize{17}{18}\selectfont\color{StyleNumber}#1}%
+    \ifx\relax#2\relax\else\hspace{0.7em}{\StyleSansFont\bfseries\large\color{StyleAccent}#2}\fi
+  \else
+    {\StyleSansFont\bfseries\large\color{StyleAccent}#1}%
+    \ifx\relax#2\relax\else\quad{\StyleSansFont\large\color{StyleAccent}#2}\fi
+    \par\smallskip
+    \noindent\textcolor{StyleBannerRule}{\rule{\linewidth}{0.5pt}}%
+  \fi
+  \par\medskip
+}
 
-% The exercise-set instruction paragraph a group of problems depends on.
-% ALWAYS include it -- without it the reader cannot tell what is being asked.
-\newcommand{\instr}[1]{\par\needspace{3\baselineskip}\smallskip\noindent
-  {\small\itshape\color{notec}#1}\par\smallskip}
+% -- the small blue sans run-in heading that titles a block of problems,
+%    e.g. "Derivative Calculations", "Motion Along a Coordinate Line", "Economics".
+\newcommand{\grouphead}[1]{%
+  \par\needspace{5\baselineskip}\smallskip
+  \noindent{\StyleSansFont\bfseries\small\color{StyleAccent}#1}\par\nobreak\smallskip
+}
 
+% -- the exercise-set instruction paragraph a group of problems depends on.
+%    ALWAYS include it -- without it the reader cannot tell what is being asked.
+\newcommand{\instr}[1]{%
+  \par\needspace{3\baselineskip}\smallskip\noindent
+  {\StyleInstrShape #1}\par\smallskip
+}
+
+% -- a numbered problem. Bold serif number, hanging indent, never stranded at a page foot.
+\newcommand{\prob}[1]{%
+  \par\needspace{4\baselineskip}\medskip\noindent
+  \hangindent=1.75em\hangafter=1
+  {\StyleBodyFont\bfseries#1}\hspace{0.45em}\ignorespaces
+}
+
+% -- a figure pulled from the source at 400 dpi.
 \newcommand{\fig}[2][0.40]{\begin{center}\includegraphics[width=#1\linewidth]{fig/#2}\end{center}}
+
+% -- centred numeric data table, for the "values at x = 0 and x = 1" style of problem.
+\newenvironment{dtable}%
+  {\par\smallskip\centering$\begin{array}{@{}c@{\hspace{1.6em}}c@{\hspace{1.6em}}c@{\hspace{1.6em}}c@{\hspace{1.6em}}c@{}}}%
+  {\end{array}$\par\smallskip}
 
 \setlist[enumerate,1]{label=\alph*.,leftmargin=2.0em,labelsep=0.45em,
   itemsep=1pt,topsep=2pt,parsep=0pt,partopsep=0pt}
@@ -55,42 +177,64 @@
 
 \begin{document}
 
+% -- title block, in the book's faces and colours --------------------------------
 \begin{center}
-{\LARGE\bfseries\color{sect} COURSE --- Homework N}\\[3pt]
-{\small BOOK TITLE \textperiodcentered\ authors}\\[1pt]
-{\small Sections listed below --- problem statements, with the exercise-set instructions they depend on}
+{\StyleSansFont\bfseries\LARGE\color{StyleAccent} COURSE --- Homework N}\\[4pt]
+{\small\StyleSansFont BOOK TITLE \textperiodcentered\ authors}\\[2pt]
+{\footnotesize\StyleSansFont Section list --- problem statements, with the exercise-set
+instructions they depend on}
 \end{center}
+\vspace{2pt}
 \hrule
 \vspace{6pt}
 
-%##################################################################
-\section*{Section 2.2\quad Limit of a Function and Limit Laws}
+%#####################################################################################
+% A section. \exbanner{<number>}{<title>}
+%#####################################################################################
+\exbanner{3.4}{The Derivative as a Rate of Change}
 
-\subsection*{Limits from Graphs}
+\grouphead{Motion Along a Coordinate Line}
 
-\prob{1.} For the function $g(x)$ graphed here, find the following limits or explain why
-they do not exist.
-\begin{enumerate}
-  \item \dots
-\end{enumerate}
+\instr{Exercises 1--6 give the positions $s=f(t)$ of a body moving on a coordinate line,
+with $s$ in meters and $t$ in seconds.
+\textbf{a.}\; Find the body's displacement and average velocity for the given time interval.
+\textbf{b.}\; Find the body's speed and acceleration at the endpoints of the interval.
+\textbf{c.}\; When, if ever, during the interval does the body change direction?}
+
+\prob{3.} $s=-t^{3}+3t^{2}-3t$, \quad $0\le t\le 3$
+
 % Example figure. Extract it to fig/<name>.png at 400 dpi, swap in the real name,
 % then uncomment -- kept commented out so this template compiles as-is.
-% \fig[0.38]{FIGNAME}
+% \fig[0.40]{FIGNAME}
 
-% A group whose instruction matters -- keep it right above the problems.
-\needspace{12\baselineskip}
-\subsection*{Limits of quotients}
-\instr{Find the limits in Exercises 23--42.}
+\grouphead{Economics}
 
-\prob{23.} $\displaystyle\lim_{x\to5}\frac{x-5}{x^{2}-25}$
+% This group has NO instruction paragraph in the book (page 151 goes straight from the
+% heading to problem 23) -- so this template must not invent one. The rule is "always carry
+% the instruction a problem depends on", not "always print an instruction": inventing text
+% the book does not have is the same class of error as dropping text it does.
+\prob{23.} \textbf{Marginal cost}\quad Suppose that the dollar cost of producing $x$ washing
+machines is $c(x)=2000+100x-0.1x^{2}$.
+\begin{enumerate}
+  \item Find the average cost per machine of producing the first 100 washing machines.
+  \item Find the marginal cost when 100 washing machines are produced.
+\end{enumerate}
 
-% A block you want kept on one page (two display formulas + text):
-\needspace{26\baselineskip}
-\prob{65.} \textbf{(part (a))}\par\smallskip
-\noindent a.\quad It can be shown that the inequalities
-\[
-1-\frac{x^{2}}{6}\;<\;\frac{x\sin x}{2-2\cos x}\;<\;1
-\]
-hold for all values of $x$ close to zero. \dots
+% A block you want kept together (stem + table + sub-items):
+\needspace{13\baselineskip}
+\prob{75.} Suppose that functions $f$ and $g$ and their derivatives with respect to $x$
+have the following values at $x=2$ and $x=3$.
+\begin{dtable}
+x & f(x) & g(x) & f'(x) & g'(x)\\[2pt]
+\hline
+2 & 8 & 2 & 1/3 & -3\\[2pt]
+3 & 3 & -4 & 2\pi & 5
+\end{dtable}
+\noindent Find the derivatives with respect to $x$ of the following combinations at the
+given value of $x$.
+\begin{enumerate}
+  \item $2f(x)$, \quad $x=2$
+  \item $f(x)+g(x)$, \quad $x=3$
+\end{enumerate}
 
 \end{document}

@@ -1,81 +1,227 @@
+% =====================================================================================
 % 中文教材题目模板 —— 用 xelatex 编译（ctex 提供中文支持）
-%   xelatex -interaction=nonstopmode hw-zh.tex      （编译两次）
-% 依赖：tlmgr install ctex cjk xecjk zhnumber
-% ctex 会自动选用 Windows 的 SimSun / SimHei，一般无需手动指定字体。
-% 如需指定：\setCJKmainfont{SimSun}  \setCJKsansfont{SimHei}
 %
+%   xelatex -interaction=nonstopmode hw-zh.tex      （编译两次）
+%
+%   依赖：tlmgr install ctex cjk xecjk zhnumber
+%   ctex 会自动选用 Windows 的 SimSun / SimHei，一般无需手动指定字体。
+%
+% 目标：成品看上去要像**从原书里撕下来的一页** —— 同样的正文衬线体、同样的无衬线彩色
+%       小标题、同样的章节横幅、同样的题号字体。它**不是**一份通用 LaTeX 讲义。
+% =====================================================================================
+
 \documentclass[11pt,a4paper]{ctexart}
+
+\usepackage{xcolor}            % 下面的 STYLE BLOCK 需要 \definecolor
+
+%#####################################################################################
+%##  STYLE BLOCK —— 让它长得像原书，全靠这一块。                                      ##
+%##                                                                                  ##
+%##  不要手写：先跑                                                                 ##
+%##      python scripts/style_probe.py -i book.pdf -p <习题页> --latex              ##
+%##  把它打印出来的整块内容粘贴覆盖这一段。脚本吐出的就是可直接粘贴的成品，         ##
+%##  每个值都取自原书本身。                                                         ##
+%##                                                                                  ##
+%##  下面这组值是**实测**自 Thomas' Calculus 14e SI 的，只作可用的样例，              ##
+%##  不是通用默认值。换一本书，正文衬线体、强调色、甚至"有没有横幅""页眉有没有细线"     ##
+%##  都可能不同。重新测，不要照抄。中文教材另见下方"中文适配"。                        ##
+%#####################################################################################
+
+% ---- 1. 字体 ------------------------------------------------------------------------
+%   xelatex 场景下：西文/数学用 Times 系，中文默认走 ctex 的 SimSun / SimHei。
+%   若原书正文是宋体、标题是黑体（绝大多数中文教材），保持默认即可。
+\usepackage{mathptmx}          % Times 系西文 + 数学
+\usepackage{tgheros}           % Helvetica 系无衬线（标题、横幅、页眉）
+% 需要手动指定中文字体时：
+%   \setCJKmainfont{SimSun}      % 正文（宋体）
+%   \setCJKsansfont{SimHei}      % \sffamily（黑体）
+%   \setCJKmonofont{FangSong}
+
+\newcommand{\StyleBodyFont}{\rmfamily}
+\newcommand{\StyleSansFont}{\sffamily}
+
+% ---- 2. 配色 ------------------------------------------------------------------------
+%   实测自 Thomas' Calculus 14e SI 习题页；换书请用 style_probe.py 重新测。
+\definecolor{StyleInk}{HTML}{231F20}        % 正文
+\definecolor{StyleAccent}{HTML}{0089CF}     % 蓝色无衬线小标题
+\definecolor{StyleBanner}{HTML}{00608A}     % 横幅底色
+\definecolor{StyleBannerText}{HTML}{FFFFFF}
+\definecolor{StyleNumber}{HTML}{790018}     % 横幅旁的节号
+\definecolor{StyleBannerRule}{HTML}{939598} % 横幅所挂的灰色细线
+\definecolor{StyleHeadText}{HTML}{231F20}   % 页眉文字
+\definecolor{StyleHeadRule}{HTML}{ED1846}   % 页眉细线（关闭时不使用）
+
+% ---- 3. 横幅 ------------------------------------------------------------------------
+%   原书的样子是：一条贯穿版心的灰色细线，线上挂一个实心方块（反白"习题"），
+%   右边跟深红色的节号。若原书没有横幅，把下面改成 \StyleBannerfalse，
+%   节标题会退化成一条普通的彩色标题行（下方另加细线）。
+\newif\ifStyleBanner
+\StyleBannertrue
+% 细线相对横幅文字基线的抬升量。这个值是**模板自己**的方块几何
+% （0.75 × 下面 14pt 标签 + 3pt \fboxsep），调到细线正好压在方块顶边；
+% 原书自己的量测（基线到细线 15.3pt）由脚本打印在注释里，仅供对照。
+% 若线切穿了方块而不是贴在方块顶边，微调这个值。
+\newcommand{\StyleBannerRaise}{13.5pt}
+% 方块里的字。按原书用语与大小写填。
+\newcommand{\StyleBannerLabel}{习题}
+
+% ---- 4. 说明段落 --------------------------------------------------------------------
+%   实测：原书把习题组说明排成**正体**、与正文同字号，靠上面那行蓝色小标题分隔。
+%   想跟随原书就留 \relax；若原书用斜体排说明，改成 \itshape。
+\newcommand{\StyleInstrShape}{\relax}
+
+% ---- 5. 页眉 ------------------------------------------------------------------------
+%   实测：原书页眉是**正文墨色的无衬线字**，且页眉下面**没有**细线。
+%   只有当原书页眉确实带细线时才把下面改成 \StyleHeadRuletrue，
+%   并把实测到的细线颜色填进上面的 StyleHeadRule。
+\newif\ifStyleHeadRule
+\StyleHeadRulefalse
+
+%#####################################################################################
+%##  STYLE BLOCK 结束 —— 以下是机制，不是样式。                                       ##
+%#####################################################################################
+
 \usepackage[margin=2.05cm]{geometry}
 \usepackage{amsmath,amssymb}
 \usepackage{graphicx}
 \usepackage{enumitem}
-\usepackage{xcolor}
 \usepackage{fancyhdr}
 \usepackage{titlesec}
 \usepackage{parskip}
 \usepackage{needspace}
+\usepackage{array}
 \usepackage[hidelinks]{hyperref}
 
-\definecolor{sect}{RGB}{21,88,180}
-\definecolor{notec}{RGB}{105,105,105}
-\definecolor{numb}{RGB}{20,20,20}
-
-\titleformat{\section}{\normalfont\large\bfseries\color{sect}}{}{0pt}{}
-\titleformat{\subsection}{\normalfont\normalsize\bfseries\color{sect}}{}{0pt}{}
-\titlespacing*{\section}{0pt}{16pt}{5pt}
-\titlespacing*{\subsection}{0pt}{11pt}{3pt}
+\color{StyleInk}
+\setlength{\parskip}{3pt plus 1pt minus 1pt}
 
 \pagestyle{fancy}
 \fancyhf{}
-\lhead{\footnotesize 课程名 · 第 N 次作业 · 教材习题}
-\rhead{\footnotesize 教材名（版本）}
-\cfoot{\footnotesize\thepage}
-\renewcommand{\headrulewidth}{0.4pt}
+\ifStyleHeadRule
+  \renewcommand{\headrulewidth}{0.4pt}
+  \renewcommand{\headrule}{\hbox to\headwidth{\color{StyleHeadRule}%
+    \leaders\hrule height \headrulewidth\hfill}}
+\else
+  \renewcommand{\headrulewidth}{0pt}   % 原书页眉下面没有细线
+\fi
+\lhead{\footnotesize\StyleSansFont\color{StyleHeadText} 课程名 \textperiodcentered\ 第 N 次作业}
+\rhead{\footnotesize\StyleSansFont\color{StyleHeadText} 教材名（版本）}
+\cfoot{\footnotesize\StyleSansFont\color{StyleInk}\thepage}
 
-% 题号。\needspace 防止题号落在页底
-\newcommand{\prob}[1]{\par\needspace{4\baselineskip}\medskip\noindent
-  \hangindent=1.75em\hangafter=1\textbf{\color{numb}#1}\hspace{0.45em}\ignorespaces}
+% -- 节标题。开横幅时复刻原书的习题开篇：
+%      ----------------------------  （贯穿版心的灰色细线）
+%      [ 习题 ]  3.6   导数的链式法则
+%    若原书此处不印节标题，第二个参数留空即可。
+\newcommand{\exbanner}[2]{%
+  \par\needspace{6\baselineskip}\medskip
+  \noindent
+  \ifStyleBanner
+    % 先画细线，再画不透明的方块把它压住
+    \rlap{\raisebox{\StyleBannerRaise}{\rlap{\color{StyleBannerRule}%
+      \rule{\linewidth}{0.5pt}}}}%
+    \colorbox{StyleBanner}{\textcolor{StyleBannerText}{\StyleSansFont\bfseries
+      \fontsize{14}{16}\selectfont\,\StyleBannerLabel\,}}%
+    \hspace{0.55em}%
+    {\StyleSansFont\bfseries\fontsize{17}{18}\selectfont\color{StyleNumber}#1}%
+    \ifx\relax#2\relax\else\hspace{0.7em}{\StyleSansFont\bfseries\large\color{StyleAccent}#2}\fi
+  \else
+    {\StyleSansFont\bfseries\large\color{StyleAccent}#1}%
+    \ifx\relax#2\relax\else\quad{\StyleSansFont\large\color{StyleAccent}#2}\fi
+    \par\smallskip
+    \noindent\textcolor{StyleBannerRule}{\rule{\linewidth}{0.5pt}}%
+  \fi
+  \par\medskip
+}
 
-% 习题组说明段落 —— 一定要写，否则读者看不出题目要求
-\newcommand{\instr}[1]{\par\needspace{3\baselineskip}\smallskip\noindent
-  {\small\itshape\color{notec}#1}\par\smallskip}
+% -- 一组题上方那行蓝色无衬线小标题，如"导数计算""沿坐标线的运动""经济学应用"。
+\newcommand{\grouphead}[1]{%
+  \par\needspace{5\baselineskip}\smallskip
+  \noindent{\StyleSansFont\bfseries\small\color{StyleAccent}#1}\par\nobreak\smallskip
+}
 
+% -- 习题组说明段落 —— 每道题依赖它的，一定要写，否则读者看不出题目要求。
+\newcommand{\instr}[1]{%
+  \par\needspace{3\baselineskip}\smallskip\noindent
+  {\StyleInstrShape #1}\par\smallskip
+}
+
+% -- 题号。粗体衬线、悬挂缩进，且不会孤零零落在页底。
+\newcommand{\prob}[1]{%
+  \par\needspace{4\baselineskip}\medskip\noindent
+  \hangindent=1.75em\hangafter=1
+  {\StyleBodyFont\bfseries#1}\hspace{0.45em}\ignorespaces
+}
+
+% -- 从原书按 400 dpi 抽出的插图。
 \newcommand{\fig}[2][0.40]{\begin{center}\includegraphics[width=#1\linewidth]{fig/#2}\end{center}}
+
+% -- 居中的数值表，用于"在 x = 0 与 x = 1 处取值如下"这类题。
+\newenvironment{dtable}%
+  {\par\smallskip\centering$\begin{array}{@{}c@{\hspace{1.6em}}c@{\hspace{1.6em}}c@{\hspace{1.6em}}c@{\hspace{1.6em}}c@{}}}%
+  {\end{array}$\par\smallskip}
 
 \setlist[enumerate,1]{label=\alph*.,leftmargin=2.0em,labelsep=0.45em,
   itemsep=1pt,topsep=2pt,parsep=0pt,partopsep=0pt}
+\setlist[enumerate,2]{label=\arabic*.,leftmargin=1.7em,labelsep=0.4em,
+  itemsep=1pt,topsep=1pt,parsep=0pt,partopsep=0pt}
 
 \widowpenalty=10000
 \clubpenalty=10000
 
 \begin{document}
 
+% -- 标题区，用原书的字体与配色 --------------------------------------------------
 \begin{center}
-{\LARGE\bfseries\color{sect} 课程名 —— 第 N 次作业}\\[3pt]
-{\small 教材名 · 作者}\\[1pt]
-{\small 下列章节的题目，含其所依赖的习题组说明}
+{\StyleSansFont\bfseries\LARGE\color{StyleAccent} 课程名 —— 第 N 次作业}\\[4pt]
+{\small\StyleSansFont 教材名 \textperiodcentered\ 作者}\\[2pt]
+{\footnotesize\StyleSansFont 下列章节的题目，含其所依赖的习题组说明}
 \end{center}
+\vspace{2pt}
 \hrule
 \vspace{6pt}
 
-%##################################################################
-\section*{第 2.2 节\quad 函数的极限与极限运算法则}
+%#####################################################################################
+% 一节。\exbanner{<节号>}{<节标题>}
+%#####################################################################################
+\exbanner{3.4}{导数作为变化率}
 
-\subsection*{由图像求极限}
+\grouphead{沿坐标线的运动}
 
-\prob{1.} 对下图给出的函数 $g(x)$，求下列极限，或说明其不存在。
-\begin{enumerate}
-  \item \dots
-\end{enumerate}
+\instr{第 1--6 题给出物体在坐标线上运动的位置 $s=f(t)$，$s$ 以米计、$t$ 以秒计。
+\textbf{a.}\; 求该时间区间内物体的位移与平均速度。
+\textbf{b.}\; 求区间端点处物体的速率与加速度。
+\textbf{c.}\; 若区间内物体改变过运动方向，何时改变？}
+
+\prob{3.} $s=-t^{3}+3t^{2}-3t$, \quad $0\le t\le 3$
+
 % 示例插图：把图按 400 dpi 抽到 fig/<名字>.png，换成实际文件名后取消注释。
 % 这里保持注释状态，模板才能开箱直接编译通过。
-% \fig[0.38]{FIGNAME}
+% \fig[0.40]{FIGNAME}
 
-% 依赖说明的一组题 —— 说明必须紧跟在题目前面
-\needspace{12\baselineskip}
-\subsection*{商的极限}
-\instr{求第 23--42 题中的极限。}
+\grouphead{经济学应用}
 
-\prob{23.} $\displaystyle\lim_{x\to5}\frac{x-5}{x^{2}-25}$
+% 这一组在原书里**没有**说明段落（p151 从标题直接进入第 23 题），所以模板也不能编一条出来。
+% 规则是"务必带上题目所依赖的说明"，不是"每组都要印一句话"：
+% 编造原书没有的文字，和漏掉原书有的文字，是同一类错误。
+\prob{23.} \textbf{边际成本}\quad 设生产 $x$ 台洗衣机的成本（美元）为 $c(x)=2000+100x-0.1x^{2}$。
+\begin{enumerate}
+  \item 求生产前 100 台洗衣机的平均单台成本。
+  \item 求生产 100 台时的边际成本。
+\end{enumerate}
+
+% 希望整块不跨页的题（题干 + 数值表 + 小问）：
+\needspace{13\baselineskip}
+\prob{75.} 设函数 $f$ 与 $g$ 及其导数在 $x=2$ 与 $x=3$ 处取值如下。
+\begin{dtable}
+x & f(x) & g(x) & f'(x) & g'(x)\\[2pt]
+\hline
+2 & 8 & 2 & 1/3 & -3\\[2pt]
+3 & 3 & -4 & 2\pi & 5
+\end{dtable}
+\noindent 求下列组合在给定 $x$ 处对 $x$ 的导数。
+\begin{enumerate}
+  \item $2f(x)$, \quad $x=2$
+  \item $f(x)+g(x)$, \quad $x=3$
+\end{enumerate}
 
 \end{document}

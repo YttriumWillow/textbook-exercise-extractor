@@ -17,6 +17,7 @@ textbook-exercise-extractor/
 │   ├── crop_rect.py                     # 按 point 裁剪页/题区域；整页分块（避免视觉工具降采样）
 │   ├── figure_box.py                    # 图形裁剪框自动 fit（四边无墨迹）
 │   ├── glyphcheck.py                    # 文本层说谎时判定字形真身（降部检验 / 字形比对）
+│   ├── style_probe.py                   # 量原书排版（字体/配色/横幅/页眉），打印可粘贴的 STYLE BLOCK
 │   └── tex2md.py                        # LaTeX → Markdown（保留公式与 a./b./c. 小问）
 ├── references/
 │   ├── visual-verification.md           # 先让自己"看得见"：read_image 配置、分块渲染、子代理复核
@@ -86,6 +87,38 @@ description: "…（如 \"2.2: #1, 4(a)-(e), 9...\"）…"
   （给转写稿 + 页位图 + 字形陷阱表，要求逐题给出 `✅ / ❌ / ⚠️ 无法判定`）。
   实测 39 题的构建中，4 个复核子代理报出**零数学错误，但抓到 2 处结构性遗漏**
   —— 这正是转写者自己看不见的那一类问题。
+- **外观要量、不要猜**：先跑 `scripts/style_probe.py` 量出原书的字体、强调色、横幅与页眉，
+  填进模板的 STYLE BLOCK（做法见下一节）。
+
+## 外观：像从原书里撕下来的一页 / Match the book's look
+
+成品不是通用 LaTeX 讲义，而是**同一本书里的一页**：同样的正文衬线体、同样的无衬线彩色小标题、
+同样的习题横幅、同样的题号字体。所以样式要**量出来**，不是猜出来：
+
+```powershell
+python scripts/style_probe.py -i "book.pdf" -p <习题页> --latex -o .scratch/style.tex
+```
+
+脚本直接读习题页本身，打印 FACE / COLOUR / HEAD BAND / RULE / SHAPE / BANNER BAND 六项普查，
+最后给出**可直接粘贴**的完整 STYLE BLOCK（粘到 `assets/hw-template.tex` 或 `hw-template-zh.tex`
+的 STYLE BLOCK 处）：
+
+| 量什么 | 怎么判 |
+|---|---|
+| 正文衬线体 | 字符数最多的衬线 span → 字体包建议（Times→`mathptmx`、Garamond→`ebgaramond`…） |
+| 强调色 | 无衬线文字里最显眼的非黑非白颜色 |
+| 横幅 | 饱和度足够的实心矩形；框内文字＝标签（`EXERCISES` / `习题`），框右侧最大字号文字＝节号 |
+| 横幅细线 | 与横幅顶边同高的整版细线，并量出"标签基线 → 细线"的距离 |
+| 页眉 | 页眉带里的颜色，以及页眉下面究竟有没有细线 |
+
+两个开关完全由实测决定：原书没有横幅 → `\StyleBannerfalse`；页眉下面没有细线 →
+`\StyleHeadRulefalse`（*Thomas' Calculus 14e SI* 正是"有横幅、页眉无细线"）。
+模板自带的那组值只是**一份样例**，换书必须重测 —— 照抄样例正是这条流程要避免的错。
+
+**模仿的是排版，不是版面。** 成品要清晰简洁：正文保持 10–11 pt 单栏，只用原书自己有的层级
+（横幅 / 蓝色小标题 / 题号），不加封面页与目录、不加额外色块；每组说明段落只排一次，
+`\needspace` 取 4–16 行，图形按原书比例。交付前比一比页数，超过原书题目页数约 1.5 倍
+就说明排得太松。
 
 ## 语言支持 / Language support
 

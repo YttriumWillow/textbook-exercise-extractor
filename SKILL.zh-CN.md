@@ -42,6 +42,20 @@ PDF / LaTeX 源 / Markdown 都不需要它。TeX 宏包同理 —— 等编译�
 校样图、中间 PDF 全部放进去。根目录只保留**最终交付物**
 （以及可选的小源目录，如 `hw1_build/`）。收工删除临时目录；大体积下载放 `$env:TEMP`，用完即删。
 
+## 输出要清晰简洁（用户规则）
+
+模仿的是原书的**字体与配色**，绝不是它的物理版面。交付物是一份作业纸，读起来像原书，
+**不是**原书的翻印本：
+
+- 正文保持 10–11 pt、A4、**单栏**。原书那种 9 pt 双栏在作业纸上根本没法读 ——
+  要抄的是字体和配色，不是分栏网格。
+- 层级只用原书自己用的那几级：节横幅、蓝色无衬线小标题、题号。
+  不加封面页、不加目录、不加额外的框和颜色。
+- 每组说明段落**只排一次**，紧贴它覆盖的题目上方。
+- `\needspace` 取值克制（§4–16 行）；20–34 会甩出半页空白。
+- 图形保持原书比例（默认 `\fig[0.40]`）；不要为填满页面而放大某张图。
+- 交付前比一下页数：超过原书题目页数的约 1.5 倍，说明排版太松。
+
 ## 核心原则：位置信息不要信文字层
 
 许多排版书籍（LaTeX / InDesign 导出）的 span 与 line 包围盒对部分段落会**偏移 20–40 pt**，
@@ -105,10 +119,25 @@ PDF / LaTeX 源 / Markdown 都不需要它。TeX 宏包同理 —— 等编译�
 图形常与正文**并排** —— 必须按 x 区间隔离，否则会把文字拖进图片。
 裁完**每张都要看一眼**：混进相邻题目的一行字、或从书里带进来的重复题号，都很容易误发。
 
-**5. 写 `.tex`**（模板 `assets/hw-template.tex`），显式写出说明段落，编译两遍。
+**5. 量原书排版，填 STYLE BLOCK。** 成品要像从原书里撕下来的一页，所以**去量原书**，
+不要凭感觉：
+
+```powershell
+python scripts/style_probe.py -i "book.pdf" -p <习题页> --latex -o .scratch/style.tex
+```
+
+把它打印出来的整块内容粘贴覆盖 `assets/hw-template.tex`（或 `hw-template-zh.tex`）的
+STYLE BLOCK。脚本直接读习题页本身，量出正文衬线体与字号、强调色、横幅（标签文字、底色、
+所挂细线、节号颜色）以及页眉；它会在块上面打印各项普查结果，让你看见它到底看了什么。
+两个开关完全由实测决定：原书没有横幅就 `\StyleBannerfalse`，页眉下面没有细线就
+`\StyleHeadRulefalse` —— *Thomas' Calculus 14e SI* 正是"有横幅、页眉无细线"，
+而此前一次构建给页眉加了一条原书根本没有的红色细线。模板自带的那组值只是一份样例，
+**换书绝不能照抄**。
+
+**6. 写 `.tex`**（模板 `assets/hw-template.tex`），显式写出说明段落，编译两遍。
 `\needspace` 取值要克制（§4–16 行为宜）；取 20–34 会甩出半页空白、白白多出几页。
 
-**6. 两级校验。**
+**7. 两级校验。**
   - 先把输出 PDF 逐页渲染（200 dpi，上下半幅，避免被降采样）并**实际读完**：
     题目齐全、公式正常、无 `??`、页底无孤立标题。
   - 再**每个小节开一个子代理独立复核**：给转写稿、该小节的页位图、字形陷阱表，
@@ -116,7 +145,7 @@ PDF / LaTeX 源 / Markdown 都不需要它。TeX 宏包同理 —— 等编译�
     实测 39 题的构建中，这一轮报出**零数学错误，但抓到 2 处结构性遗漏** ——
     正是转写者自己看不见的那一类问题。
 
-**7. 呈现结果**。
+**8. 呈现结果**。
 
 ## 中文教材支持
 
@@ -148,8 +177,32 @@ pandoc hw1.md -f markdown -t html5 -s --mathjax -o hw1.html
 
 ## 安装 TeX（用户规则）
 
-**默认装到系统软件默认位置** —— Windows 上为 `C:/Program Files/texlive/<年份>`，
-并尽量控制体积：
+**先找本机是否已有 TeX Live —— 绝不要装第二份。** 已装但没进 `PATH` 的 TeX Live
+在 `pdflatex` 看来就是"没装"，所以下结论前先把盘扫一遍：
+
+```powershell
+where.exe pdflatex
+Get-ChildItem 'C:\Program Files\texlive','D:\Program Files\texlive' -ErrorAction SilentlyContinue
+```
+
+只要在任意盘、任意年份找到一份，**就不要再装**。改把它自己的 `bin\windows` 加进用户
+`PATH`，并告知用户**新开一个终端**（已在运行的 shell 仍持有旧的 `PATH`）：
+
+```powershell
+$texBin = 'D:\Program Files\texlive\<year>\bin\windows'   # ← 你找到的那份
+$k   = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Environment', $true)
+$cur = [string]$k.GetValue('Path', '', [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
+if (($cur -split ';') -notcontains $texBin) {
+  # 保留 ExpandString —— 直接用 [Environment]::SetEnvironmentVariable 会把值降级成
+  # REG_SZ，从而破坏 PATH 里任何 %VAR% 引用。
+  $k.SetValue('Path', $cur.TrimEnd(';') + ';' + $texBin,
+              [Microsoft.Win32.RegistryValueKind]::ExpandString)
+}
+$k.Close()
+```
+
+只有确实一份都没有时才安装 —— **默认装到系统软件默认位置**
+（Windows 上为 `C:/Program Files/texlive/<年份>`），并尽量控制体积：
 
 - `selected_scheme scheme-small`（或 `scheme-basic` + 少量显式宏包）。
 - profile 里设 `tlpdbopt_install_docfiles 0` 与 `tlpdbopt_install_srcfiles 0`。
@@ -167,7 +220,8 @@ pandoc hw1.md -f markdown -t html5 -s --mathjax -o hw1.html
 - Windows 装 TeX（无需管理员）：`references/installing-tex-windows.md`
 - 分栏排版陷阱与校验方法：`references/layout-pitfalls.md`
 - 脚本：`scripts/crop_rect.py`（整页分块 + 按 point 裁剪，用来看图）、`scripts/figure_box.py`（图形裁剪）、
-  `scripts/tex2md.py`（LaTeX → Markdown）、`scripts/glyphcheck.py`（文字层说谎时判定字形真身）
+  `scripts/tex2md.py`（LaTeX → Markdown）、`scripts/glyphcheck.py`（文字层说谎时判定字形真身）、
+  `scripts/style_probe.py`（量原书的字体、配色、横幅与页眉，直接打印可粘贴的 STYLE BLOCK）
 
 ## 环境备注（Windows）
 

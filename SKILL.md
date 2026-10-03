@@ -41,6 +41,22 @@ dump, profile, and intermediate PDF in it. Only the final deliverable (and an
 optional small source folder such as `hw1_build/`) belongs at the root. Delete the scratch
 dir when done; large downloads go to `$env:TEMP` and are removed after use.
 
+## Output must stay clear and concise (user rule)
+
+Match the book's **typography**, never its physical page. The deliverable is a homework
+sheet that *reads* like the book, not a facsimile of it:
+
+- Body text stays 10–11 pt on A4 in a single column. A 9 pt two-column textbook page is
+  unreadable as a problem set — copy the faces and the palette, not the grid.
+- Use only the levels the book itself uses: the section banner, the blue group heading, the
+  problem number. No cover page, no table of contents, no extra boxes, no extra colour.
+- Each instruction paragraph appears **once**, immediately above the problems it governs.
+- `\needspace` stays modest (§4–16 lines); the 20–34 range dumps half a page of whitespace.
+- Figures keep the book's proportions (`\fig[0.40]` is the default); do not enlarge one to
+  fill a page.
+- Before delivering, compare page counts: more than ~1.5× the source's problem pages means
+  the layout is too loose.
+
 ## Core principle: do not trust the PDF text layer for positions
 
 In many typeset books (LaTeX / InDesign exports) span and line bounding boxes are shifted by
@@ -116,11 +132,28 @@ them by x-range or you will drag text into the image. Then look at each crop: on
 the neighbouring problem, or a duplicated problem number carried in from the book, is easy to
 ship by accident.
 
-**5. Write the `.tex`** with explicit instruction paragraphs (template:
+**5. Measure the book's typography and fill the STYLE BLOCK.** The output must look like it
+came out of the same book, so *measure the book* instead of guessing:
+
+```powershell
+python scripts/style_probe.py -i "book.pdf" -p <exercise pages> --latex -o .scratch/style.tex
+```
+
+Paste the printed block over the STYLE BLOCK of `assets/hw-template.tex` (or
+`hw-template-zh.tex`). The probe reads the exercise pages themselves and measures the body
+face and size, the accent colour, the banner (label text, fill, hairline, and the
+section-number colour), and the running head; it prints its censuses above the block so you
+can see what it looked at. Two switches come straight out of the measurement:
+`\StyleBannerfalse` when the book has no banner, and `\StyleHeadRulefalse` when its head
+carries no hairline — *Thomas' Calculus 14e SI* is "banner yes, head rule no", and an earlier
+build invented a red head rule the book never had. The template's own values are one worked
+example; never copy them onto a different book.
+
+**6. Write the `.tex`** with explicit instruction paragraphs (template:
 `assets/hw-template.tex`) and compile twice. Keep `\needspace` modest (§4–16 lines); values in
 the 20–34 range dump half a page of whitespace and add pages.
 
-**6. Verify on two levels.**
+**7. Verify on two levels.**
   - Render the output pages (200 dpi, top/bottom halves so nothing is downscaled) and read them
     all: every problem present, formulas render, no `??`, no heading stranded at a page bottom.
   - Then spawn **one cross-checking subagent per section**, each given the transcript, its page
@@ -129,7 +162,7 @@ the 20–34 range dump half a page of whitespace and add pages.
     errors but two missing structural elements — which is exactly the class of thing the author
     of a transcript cannot see.
 
-**7. Present the result.**
+**8. Present the result.**
 
 ## Language support (CJK textbooks)
 
@@ -213,7 +246,9 @@ Full steps and post-install fixes: `references/installing-tex-windows.md`.
 - Column layout traps, verification recipes: `references/layout-pitfalls.md`
 - Scripts: `scripts/crop_rect.py` (page tiles + point-box crops, for looking at pages),
   `scripts/figure_box.py` (figure crops), `scripts/tex2md.py` (LaTeX → Markdown),
-  `scripts/glyphcheck.py` (settle what a glyph really is when the text layer lies)
+  `scripts/glyphcheck.py` (settle what a glyph really is when the text layer lies),
+  `scripts/style_probe.py` (measure the book's faces, colours, banner and running head;
+  prints a paste-ready STYLE BLOCK)
 
 ## Environment notes (Windows)
 
